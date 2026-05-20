@@ -1,7 +1,7 @@
-version: '3.8'
-
 networks:
-  sandbox-mesh:
+  public-network:
+    driver: bridge
+  private-network:
     driver: bridge
 
 services:
@@ -15,7 +15,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - sandbox-mesh
+      - private-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -27,8 +27,55 @@ services:
     build: ../db-migrations
     container_name: db-migrations
     networks:
-      - sandbox-mesh
+      - private-network
     depends_on:
       postgres-db:
         condition: service_healthy
     command: ["-database", "postgresql://${DB_USER}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME}?sslmode=disable", "up"]
+
+  api-node:
+    build: ../api-node
+    container_name: api-node
+    ports:
+      - "3000:3000"
+    networks:
+      - private-network
+      - public-network
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=5432
+      - PORT=3000
+    depends_on:
+      db-migrations:
+        condition: service_completed_successfully # Wait until migrations are fully applied!
+
+  api-golang:
+    build: ../api-golang
+    container_name: api-golang
+    ports:
+      - "8081:8080" # Map to host port 8081 since frontend uses 8080 or vice versa
+    networks:
+      - private-network
+      - public-network
+    environment:
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME}?sslmode=disable
+    depends_on:
+      db-migrations:
+        condition: service_completed_successfully # Wait until migrations are fully applied!
+
+  frontend-react:
+    build: ../frontend-react
+    container_name: frontend-react
+    ports:
+      - "8080:8080" # Map host port 8080 to Nginx's internal unprivileged port 8080
+    networks:
+      - public-network
+    # Force Nginx to wait until the backends exist in the network mesh
+    depends_on:
+      api-node:
+        condition: service_started
+      api-golang:
+        condition: service_started
