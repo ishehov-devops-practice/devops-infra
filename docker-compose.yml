@@ -5,6 +5,22 @@ networks:
     driver: bridge
 
 services:
+  gateway:
+    image: nginx:alpine
+    container_name: network-gateway
+    ports:
+      - "80:80"
+    networks:
+      - public-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend-react:
+        condition: service_started
+      api-node:
+        condition: service_started
+      api-golang:
+        condition: service_started
   postgres-db:
     image: postgres:16-alpine
     container_name: postgres-db
@@ -12,8 +28,6 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5432:5432"
     networks:
       - private-network
     healthcheck:
@@ -23,8 +37,7 @@ services:
       retries: 5
 
   db-migrations:
-    # Looks for the db-migrations code directory sitting parallel to devops-infra
-    build: ../db-migrations
+    image: ghcr.io/ishehov-devops-practice/db-migrations:latest
     container_name: db-migrations
     networks:
       - private-network
@@ -34,10 +47,8 @@ services:
     command: ["-database", "postgresql://${DB_USER}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME}?sslmode=disable", "up"]
 
   api-node:
-    build: ../api-node
+    image: ghcr.io/ishehov-devops-practice/api-node:latest
     container_name: api-node
-    ports:
-      - "3000:3000"
     networks:
       - private-network
       - public-network
@@ -50,13 +61,11 @@ services:
       - PORT=3000
     depends_on:
       db-migrations:
-        condition: service_completed_successfully # Wait until migrations are fully applied!
+        condition: service_completed_successfully
 
   api-golang:
-    build: ../api-golang
+    image: ghcr.io/ishehov-devops-practice/api-golang:latest
     container_name: api-golang
-    ports:
-      - "8081:8080" # Map to host port 8081 since frontend uses 8080 or vice versa
     networks:
       - private-network
       - public-network
@@ -64,16 +73,13 @@ services:
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME}?sslmode=disable
     depends_on:
       db-migrations:
-        condition: service_completed_successfully # Wait until migrations are fully applied!
+        condition: service_completed_successfully
 
   frontend-react:
-    build: ../frontend-react
+    image: ghcr.io/ishehov-devops-practice/frontend-react:latest
     container_name: frontend-react
-    ports:
-      - "8080:8080" # Map host port 8080 to Nginx's internal unprivileged port 8080
     networks:
       - public-network
-    # Force Nginx to wait until the backends exist in the network mesh
     depends_on:
       api-node:
         condition: service_started
