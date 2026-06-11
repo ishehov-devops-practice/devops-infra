@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: database-migration-job
+  namespace: default
+spec:
+  template:
+    spec:
+      imagePullSecrets:           
+        - name: ghcr-secret
+      containers:
+        - name: migration-engine
+          image: ghcr.io/ishehov-devops-practice/db-migrations:latest
+          args:
+            - "-database"
+            - "$(DATABASE_URL)"
+            - "up"
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://devops_user:super_secret_password@192.168.1.174:5432/sandbox_analytics?sslmode=disable"
+            
+      restartPolicy: OnFailure
+  backoffLimit: 4
