@@ -16,6 +16,7 @@ resource "proxmox_vm_qemu" "k3s_nodes" {
   agent    = 1
   scsihw   = "virtio-scsi-pci"
   memory   = each.value.memory
+  start_at_node_boot   = true
 
   # storage
   disks {
@@ -49,4 +50,50 @@ resource "proxmox_vm_qemu" "k3s_nodes" {
   sshkeys      = <<EOF
   ${var.ssh_public_key}
   EOF
+}
+
+resource "proxmox_vm_qemu" "database_node" {
+  name        = "db-prod-01"
+  vmid        = 600
+  target_node = var.target_node
+  clone       = "golden-template"
+  
+  start_at_node_boot = true
+
+  cpu {
+    cores   = 2
+    sockets = 1
+  }
+
+  memory  = 4096
+  agent   = 1
+  scsihw   = "virtio-scsi-pci"
+
+  disks {
+    scsi {
+      scsi0 {
+        disk {
+          size    = "20G"
+          storage = "local-lvm"
+        }
+      }
+    }
+    ide {
+      ide2 {
+        cloudinit {
+          storage = "local-lvm"
+        }
+      }
+    }
+  }
+
+  network {
+    id     = 0 # net0
+    model  = "virtio"
+    bridge = "vmbr0"
+  }
+
+  ipconfig0 = "ip=192.168.1.174/24,gw=192.168.1.1"
+  
+  sshkeys = var.ssh_public_key
 }

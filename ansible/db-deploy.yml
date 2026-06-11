@@ -1,0 +1,57 @@
+---
+- name: Provision production db
+  hosts: db
+  become: true
+
+  vars_files:
+    - vault.yml
+
+  tasks:
+    - name: Install postgres and deps
+      apt:
+        name: 
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+          - acl
+        update_cache: yes
+        state: present
+
+    - name: Configure postgres to listen on all network interfaces
+      lineinfile:
+        path: /etc/postgresql/16/main/postgresql.conf
+        regexp: "^#?listen_addresses\\s*=\\s*"
+        line: "listen_addresses = '*'"
+      notify: restart postgresql
+
+    - name: Allow MD5 authenticated connections from the local subnet
+      lineinfile:
+        path: /etc/postgresql/16/main/pg_hba.conf
+        line: "host    all             all             192.168.1.0/24          md5"
+      notify: restart postgresql
+
+    - name: Ensure postgres service is running and enabled
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    # Create bluepring schema
+    - name: Create application database user
+      postgresql_user:
+        name: "{{ vault_db_user }}"
+        password: "{{ vault_db_password }}"
+        role_attr_flags: SUPERUSER
+      become_user: postgres
+
+    - name: Create production application database
+      postgresql_db:
+        name: "{{ vault_db_name }}"
+        owner: "{{ vault_db_user }}"
+      become_user: postgres
+
+  handlers:
+    - name: restart postgresql
+      systemd:
+        name: postgresql
+        state: restarted
