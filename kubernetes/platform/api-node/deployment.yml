@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: api-node
+  namespace: platform
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: api-node
+
+  template:
+    metadata:
+      labels:
+        app: api-node
+
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+
+      containers:
+        - name: api-node
+
+          image: ghcr.io/ishehov-devops-practice/api-node:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3000
+
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_HOST
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_PASSWORD
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_NAME
+
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_PORT
+
+            - name: PORT
+              value: "3000"
+
+          readinessProbe:
+            httpGet:
+              path: /api/node/health
+              port: 3000
+
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /api/node/health
+              port: 3000
+
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+            limits:
+              cpu: 250m
+              memory: 256Mi
