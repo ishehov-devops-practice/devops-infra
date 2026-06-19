@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: platform-ingress
+  namespace: platform
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+    - host: analytics.192.168.1.170.nip.io
+      http:
+        paths:
+          - path: /api/node
+            pathType: Prefix
+            backend:
+              service:
+                name: api-node
+                port:
+                  number: 3000
+
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: api-golang
+                port:
+                  number: 8080
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
