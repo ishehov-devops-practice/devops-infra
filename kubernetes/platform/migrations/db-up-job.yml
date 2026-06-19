@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrations
+  namespace: platform
+spec:
+  backoffLimit: 2 
+  
+  template:
+    metadata:
+      name: db-migrations
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+
+      restartPolicy: OnFailure 
+
+      containers:
+        - name: db-migrations
+          image: ghcr.io/ishehov-devops-practice/db-migrations:latest
+          imagePullPolicy: Always
+          
+          args:
+            - "-database"
+            - "$(DATABASE_URL)"
+            - "up"
+
+          env:
+            - name: _DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_USER
+            - name: _DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_PASSWORD
+            - name: _DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_HOST
+            - name: _DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_PORT
+            - name: _DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: apis-postgres-secret
+                  key: DB_NAME
+
+            - name: DATABASE_URL
+              value: "postgres://$(_DB_USER):$(_DB_PASSWORD)@$(_DB_HOST):$(_DB_PORT)/$(_DB_NAME)?sslmode=disable"
