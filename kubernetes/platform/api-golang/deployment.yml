@@ -24,7 +24,7 @@ spec:
       containers:
         - name: api-golang
 
-          image: ghcr.io/ishehov-devops-practice/api-golang:latest
+          image: ghcr.io/ishehov-devops-practice/api-golang:sha-603662a911801fbe416a71ee783a03dd4036f9b9
           imagePullPolicy: Always
 
           ports:
