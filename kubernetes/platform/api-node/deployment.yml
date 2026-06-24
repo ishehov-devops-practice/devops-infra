@@ -24,7 +24,7 @@ spec:
       containers:
         - name: api-node
 
-          image: ghcr.io/ishehov-devops-practice/api-node:latest
+          image: ghcr.io/ishehov-devops-practice/api-node:sha-d1ffda599389e82b212653124958ab2a33fa459c
           imagePullPolicy: Always
 
           ports:
