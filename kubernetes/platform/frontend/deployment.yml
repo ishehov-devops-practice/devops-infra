@@ -22,7 +22,7 @@ spec:
       containers:
         - name: frontend
 
-          image: ghcr.io/ishehov-devops-practice/frontend-react:latest
+          image: ghcr.io/ishehov-devops-practice/frontend-react:sha-2daf081258d3fcaa24f89e439c0b0e9c1570e8a8
 
           imagePullPolicy: Always
 
